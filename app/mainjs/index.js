@@ -31,12 +31,15 @@ function registerIpc() {
       if (!url) {
         return;
       }
+
       if (url.indexOf('youtube.com') > -1 &&
           url.indexOf('watch') > -1) {
         // if already checking/checked, do nothing
         if (_checked[url]) return;
         _checked[url] = true;
         _currentUrl = url;
+
+        console.log('Analyzing youtube url');
 
         // we have a youtube url
         // send to backend for analysis
@@ -46,14 +49,12 @@ function registerIpc() {
           // provide timestamp to frontend
           overlay.send('app', {
             action: message.URL_RESULT,
-            data: {
-              url,
-              result,
-            },
+            data: { url, result, },
           });
         }).catch(err => console.error(err));
       } else {
         // user navigated away from url, stop laughing!!
+        overlay.hide('app');
       }
     });
   });
@@ -63,12 +64,11 @@ function registerIpc() {
   });
 
   ipc.register('async', message.GET_GIF, (data) => {
-    // just ignore no longer valid show gifs
+    // ignore no longer valid GET_GIF
     if (data.url !== _currentUrl) return;
 
     gfycat.search().then(result => {
       console.log('GET_GIF');
-
       overlay.render('app', { exclusive: true });
 
       // provide timestamp to frontend
