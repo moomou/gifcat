@@ -1,26 +1,47 @@
-import subprocess
+#!/usr/bin/env python
 import os
+import subprocess
+import sys
+import tempfile
+import uuid
 
 from flask import Flask, jsonify
 import keras
 import librosa
 
-from feature import parse_eval_file
+from feature import parse_audio_files
 
 app = Flask(__name__)
-model = keras.models.load_model('./model.h5')
+m = keras.models.load_model('./model.h5')
+# print(dir(model))
 
-def analyze_video(url):
-    tmp_f = tempfile.NamedTemporaryFile(delete=False)
+def analyze_video(url, incr=2):
+    global m
 
+    # create prefix dir
+    prefix = str(uuid.uuid4()).replace('-', '')
+    os.mkdir(prefix)
+
+    # download the file
     subprocess.check_output(
-        'youtube-dl --extract-audio --audio-format wav -o %s %s' % (
-            tmp_f.name, url
-        )
+        'youtube-dl --extract-audio --audio-format wav -o %s/src.%%\(ext\)s %s' % (
+            prefix, url
+        ),
+        shell=True
     )
 
-    features = parse_eval_file(tmp_f.name)
-    output = model.predict_classes(np.array([features]))
+    # split into 2 sec increments
+    subprocess.check_output(
+        'cd %s && ffmpeg -i src.wav -f segment -segment_time %s -c copy out%%03d.wav' % (
+            prefix, incr
+        ),
+        shell=True
+    )
+
+    os.remove('%s/src.wav' % prefix)
+
+    features = parse_audio_files(prefix)
+    output = m.predict_classes(features)
 
     print(output)
 
@@ -35,3 +56,5 @@ def model():
         print(e)
         return jsonify({'error': e})
 
+if __name__ == '__main__':
+    analyze_video(sys.argv[1])

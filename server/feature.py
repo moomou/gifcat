@@ -1,3 +1,5 @@
+import glob
+import os
 import librosa
 import numpy as np
 
@@ -20,19 +22,20 @@ def one_hot_encode(labels):
     return one_hot_encode
 
 def parse_eval_file(path):
+    features, labels = np.empty((0,187)), np.empty(0)
+
     mfccs, chroma, mel, contrast = extract_feature(path)
     ext_features = np.hstack([mfccs,chroma,mel,contrast])
     features = np.vstack([features, ext_features])
 
     return np.array(features)
 
-def parse_audio_files(parent_dir, label, subdir, file_ext="*.wav"):
-    features, labels = np.empty((0,187)), np.empty(0)
+def parse_audio_files(parent_dir, file_ext="*.wav"):
+    features = np.empty((0,187))
 
-    for fn in glob.glob(os.path.join(parent_dir, label, subdir, file_ext)):
+    for fn in glob.glob(os.path.join(parent_dir, file_ext)):
         mfccs, chroma, mel, contrast = extract_feature(fn)
         ext_features = np.hstack([mfccs,chroma,mel,contrast])
         features = np.vstack([features,ext_features])
-        labels = np.append(labels, 1 if label == 'laughter' else 0)
 
-    return np.array(features), np.array(labels, dtype = np.int)
+    return np.array(features)
